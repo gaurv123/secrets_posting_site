@@ -52,10 +52,12 @@ const User=new mongoose.model("User",userSchema);
 
 passport.use(User.createStrategy());
 
+// used for supporting user session and remember user
 passport.serializeUser(function(user,done){
     done(null,user.id);
 });
 
+// user
 passport.deserializeUser(function(id,done){
     User.findById(id,function(err,user){
         done(err,user);
