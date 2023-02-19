@@ -34,13 +34,14 @@ app.use(passport.session());
 mongoose.set('strictQuery', true);
 
 // database connection string
-mongoose.connect("mongodb://localhost:27017/googleLogin");
+mongoose.connect(process.env.MONGO_URL);
 
 // defined user schema for database
 const userSchema=new mongoose.Schema({
     email:String,
     password:String,
-    googleId:String
+    googleId:String,
+    secret:String
 });
 
 // plugins to be used with userSchema 
@@ -88,6 +89,19 @@ app.get("/",function(req,res){
     res.render("home");
 });
 
+app.get("/submit",function(req,res){
+    // console.log(req.user);
+    if(req.isAuthenticated()){
+        res.render("submit");
+    }
+    else{
+        res.redirect("/login");
+    }
+
+})
+
+
+
 // listens get request to the register route
 app.get("/register",function(req,res){
     res.render("register");
@@ -122,12 +136,41 @@ app.get("/auth/google/secrets",
 
 // passport authentication if a user is authenticated to be redirected to the secrets page
 app.get("/secrets",function(req,res){
-    if(req.isAuthenticated()){
-        res.render("secrets");
+  User.find({"secret":{$ne:null}},function(err,foundUser){
+    if(err){
+        console.log(err);
+
     }
     else{
-        res.redirect("/login");
+        if(foundUser){
+            res.render("secrets",{userwithsecret:foundUser});
+        }
     }
+  })
+})
+
+
+// to allow user to post secret 
+app.post("/submit",function(req,res){
+    // access the secret
+    const usersecret=req.body.secret;
+
+    // find user by id and then save in their database json the secret and redirect them to view all secrets along with newone they just added
+    User.findById(req.user.id,function(err,foundUser){
+
+        if(err){
+            console.log(err);
+        }
+        else{
+            if(foundUser){
+                foundUser.secret=usersecret;
+                foundUser.save(function(){
+                    res.redirect("/secrets");
+
+                });
+            }
+        }
+    }) 
 })
 
 // registration of the user using passport-local strategy and authentication 
